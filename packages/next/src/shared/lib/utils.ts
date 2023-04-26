@@ -7,6 +7,7 @@ import type { NextRouter } from './router/router'
 import type { ParsedUrlQuery } from 'querystring'
 import type { PreviewData } from 'next/types'
 import { COMPILER_NAMES } from './constants'
+import { TYPE_INTERNALS } from '../../server/web/spec-extension/response'
 
 export type NextComponentType<
   Context extends BaseContext = NextPageContext,
@@ -225,22 +226,18 @@ export interface NextApiRequest extends IncomingMessage {
 }
 
 /**
- * Send body of response
- */
-type Send<T> = (body: T) => void
-
-/**
  * Next `API` route response
  */
 export type NextApiResponse<Data = any> = ServerResponse & {
   /**
    * Send data `any` data in response
    */
-  send: Send<Data>
+  send<T = Data>(body: T): { [TYPE_INTERNALS]: T }
   /**
    * Send data `json` data in response
    */
-  json: Send<Data>
+  json<T = Data>(body: T): { [TYPE_INTERNALS]: T }
+  end: () => { [TYPE_INTERNALS]: null }
   status: (statusCode: number) => NextApiResponse<Data>
   redirect(url: string): NextApiResponse<Data>
   redirect(status: number, url: string): NextApiResponse<Data>
@@ -452,3 +449,23 @@ export interface CacheFs {
   mkdir(dir: string): Promise<void | string>
   stat(f: string): Promise<{ mtime: Date }>
 }
+
+type InputFunc<T extends { [TYPE_INTERNALS]: any } | any = any> = (
+  ...args: any[]
+) => Promise<T> | T
+
+export type InferApiReturnType<
+  HandlerFunc extends InputFunc,
+  ReturnValue extends ReturnType<HandlerFunc> = ReturnType<HandlerFunc>,
+  AwaitedReturnValue extends Awaited<ReturnValue> = Awaited<ReturnValue>
+> = ReturnValue extends Promise<any>
+  ? AwaitedReturnValue extends { [TYPE_INTERNALS]: any }
+    ? AwaitedReturnValue[typeof TYPE_INTERNALS]
+    : AwaitedReturnValue extends void
+    ? null
+    : AwaitedReturnValue
+  : ReturnValue extends { [TYPE_INTERNALS]: any }
+  ? ReturnValue[typeof TYPE_INTERNALS]
+  : ReturnValue extends void
+  ? null
+  : ReturnValue

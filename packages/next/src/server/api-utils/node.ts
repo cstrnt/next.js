@@ -210,7 +210,7 @@ function getMaxContentLength(responseLimit?: ResponseLimit) {
  * @param res response object
  * @param body of response
  */
-function sendData(req: NextApiRequest, res: NextApiResponse, body: any): void {
+function sendData(req: NextApiRequest, res: NextApiResponse, body: any) {
   if (body === null || body === undefined) {
     res.end()
     return
@@ -536,7 +536,7 @@ export async function apiResolver(
       contentLength += Buffer.byteLength(args[0] || '')
       return writeData.apply(apiRes, args)
     }
-    apiRes.end = (...args: any[2]) => {
+    apiRes.end = ((...args: any[2]) => {
       if (args.length && typeof args[0] !== 'function') {
         contentLength += Buffer.byteLength(args[0] || '')
       }
@@ -550,10 +550,11 @@ export async function apiResolver(
       }
 
       endResponse.apply(apiRes, args)
-    }
+    }) as NextApiResponse['end']
     apiRes.status = (statusCode) => sendStatusCode(apiRes, statusCode)
-    apiRes.send = (data) => sendData(apiReq, apiRes, data)
-    apiRes.json = (data) => sendJson(apiRes, data)
+    apiRes.send = ((data) =>
+      sendData(apiReq, apiRes, data)) as NextApiResponse['send']
+    apiRes.json = ((data) => sendJson(apiRes, data)) as NextApiResponse['json']
     apiRes.redirect = (statusOrUrl: number | string, url?: string) =>
       redirect(apiRes, statusOrUrl, url)
     apiRes.setDraftMode = (options = { enable: true }) =>

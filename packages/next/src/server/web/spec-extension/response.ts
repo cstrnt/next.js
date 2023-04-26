@@ -5,6 +5,7 @@ import { toNodeHeaders, validateURL } from '../utils'
 import { ResponseCookies } from './cookies'
 
 const INTERNALS = Symbol('internal response')
+export const TYPE_INTERNALS = Symbol('type internals')
 const REDIRECTS = new Set([301, 302, 303, 307, 308])
 
 function handleMiddlewareField(
@@ -26,10 +27,11 @@ function handleMiddlewareField(
   }
 }
 
-export class NextResponse extends Response {
+export class NextResponse<T = any> extends Response {
   [INTERNALS]: {
     cookies: ResponseCookies
     url?: NextURL
+    type: T
   }
 
   constructor(body?: BodyInit | null, init: ResponseInit = {}) {
@@ -43,6 +45,7 @@ export class NextResponse extends Response {
             nextConfig: init.nextConfig,
           })
         : undefined,
+      type: null as any,
     }
   }
 
@@ -66,7 +69,7 @@ export class NextResponse extends Response {
     return this[INTERNALS].cookies
   }
 
-  static json(body: any, init?: ResponseInit): NextResponse {
+  static json<T>(body: T, init?: ResponseInit): NextResponse<T> {
     // @ts-expect-error This is not in lib/dom right now, and we can't augment it.
     const response: Response = Response.json(body, init)
     return new NextResponse(response.body, response)
